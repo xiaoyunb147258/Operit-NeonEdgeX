@@ -88,6 +88,23 @@ jobs:
           test -f terminal/build.gradle.kts
           test -d termuxlib/termux-shared
           echo "terminal sources vendored in repo"
+
+      - name: Fetch Ubuntu rootfs asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEST=terminal/src/main/assets/ubuntu-noble-aarch64-pd-v4.18.0.tar.xz
+          mkdir -p terminal/src/main/assets
+          if [ -s "$DEST" ]; then
+            echo "rootfs already present"
+          else
+            echo "downloading rootfs..."
+            curl -fL --retry 4 --retry-delay 5 \
+              -o "$DEST" \
+              "https://github.com/xiaoyunb147258/Operit-NeonEdgeX/releases/download/assets-v1/ubuntu-noble-aarch64-pd-v4.18.0.tar.xz"
+          fi
+          test -s "$DEST"
+          ls -lh "$DEST"
       - name: Set up JDK
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
