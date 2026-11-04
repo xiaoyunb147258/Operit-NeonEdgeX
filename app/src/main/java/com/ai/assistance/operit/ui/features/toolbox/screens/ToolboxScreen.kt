@@ -8,7 +8,9 @@ import androidx.compose.material3.AlertDialog
 
 import androidx.compose.material3.SmallFloatingActionButton
 
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Terminal
 
 import com.ai.assistance.operit.ui.features.termux.TermuxTerminalScreen
 
@@ -225,12 +227,11 @@ fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = f
 
         // Termux 模式下不初始化 proot 环境，避免无谓开销
         val terminalManager = remember { TerminalManager.getInstance(context) }
-        val terminalEnv =
-                remember(mode, forceShowSetup) {
-                        if (mode == TerminalModeManager.MODE_NATIVE) {
-                                rememberTerminalEnv(terminalManager = terminalManager, forceShowSetup = forceShowSetup)
-                        } else null
-                }
+        val nativeEnv =
+                if (mode == TerminalModeManager.MODE_NATIVE) {
+                        rememberTerminalEnv(terminalManager = terminalManager, forceShowSetup = forceShowSetup)
+                } else null
+        val terminalEnv = nativeEnv
 
         CustomScaffold() { paddingValues ->
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
