@@ -225,84 +225,130 @@ fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = f
         var mode by remember { mutableStateOf(TerminalModeManager.getMode(context)) }
         var showSwitcher by remember { mutableStateOf(false) }
 
-        // Termux 模式下不初始化 proot 环境，避免无谓开销
         val terminalManager = remember { TerminalManager.getInstance(context) }
         val nativeEnv =
                 if (mode == TerminalModeManager.MODE_NATIVE) {
-                        rememberTerminalEnv(terminalManager = terminalManager, forceShowSetup = forceShowSetup)
+                        rememberTerminalEnv(
+                                terminalManager = terminalManager,
+                                forceShowSetup = forceShowSetup
+                        )
                 } else null
-        val terminalEnv = nativeEnv
 
         CustomScaffold() { paddingValues ->
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                        when (mode) {
-                                TerminalModeManager.MODE_TERMUX -> TermuxTerminalScreen()
-                                else -> {
-                                        val env = terminalEnv
+                Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        // 顶部模式切换条（始终可见）
+                        Row(
+                                modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Text(
+                                        "终端类型",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                )
+                                ModeTab(
+                                        text = "原生 Ubuntu",
+                                        active = mode == TerminalModeManager.MODE_NATIVE
+                                ) {
+                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_NATIVE)
+                                        mode = TerminalModeManager.MODE_NATIVE
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                ModeTab(
+                                        text = "Termux",
+                                        active = mode == TerminalModeManager.MODE_TERMUX
+                                ) {
+                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_TERMUX)
+                                        mode = TerminalModeManager.MODE_TERMUX
+                                }
+                                Spacer(Modifier.weight(1f))
+                                IconButton(onClick = { showSwitcher = true }, modifier = Modifier.size(30.dp)) {
+                                        Icon(
+                                                Icons.Default.Terminal,
+                                                contentDescription = "切换终端模式",
+                                                modifier = Modifier.size(18.dp)
+                                        )
+                                }
+                        }
+
+                        // 内容区
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                if (mode == TerminalModeManager.MODE_TERMUX) {
+                                        TermuxTerminalScreen()
+                                } else {
+                                        val env = nativeEnv
                                         if (env != null) {
                                                 TerminalViewScreen(env = env)
                                         }
                                 }
                         }
+                }
 
-                        // 右上角模式切换按钮
-                        SmallFloatingActionButton(
-                                onClick = { showSwitcher = true },
-                                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                                Icon(Icons.Default.Terminal, contentDescription = "切换终端模式")
-                        }
-
-                        if (showSwitcher) {
-                                AlertDialog(
-                                        onDismissRequest = { showSwitcher = false },
-                                        title = { Text("切换终端模式") },
-                                        text = {
-                                                Column {
-                                                        Text(
-                                                                "当前：" + TerminalModeManager.displayName(mode),
-                                                                fontSize = 12.sp,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                        Spacer(Modifier.height(12.dp))
-                                                        ModeRow(
-                                                                title = "原生 Ubuntu 终端",
-                                                                desc = "proot 容器，兼容原版行为",
-                                                                active = mode == TerminalModeManager.MODE_NATIVE
-                                                        ) {
-                                                                TerminalModeManager.setMode(context, TerminalModeManager.MODE_NATIVE)
-                                                                mode = TerminalModeManager.MODE_NATIVE
-                                                                showSwitcher = false
-                                                        }
-                                                        Spacer(Modifier.height(8.dp))
-                                                        ModeRow(
-                                                                title = "Termux 终端",
-                                                                desc = "真正的 pkg/apt 手机本地环境",
-                                                                active = mode == TerminalModeManager.MODE_TERMUX
-                                                        ) {
-                                                                TerminalModeManager.setMode(context, TerminalModeManager.MODE_TERMUX)
-                                                                mode = TerminalModeManager.MODE_TERMUX
-                                                                showSwitcher = false
-                                                        }
+                if (showSwitcher) {
+                        AlertDialog(
+                                onDismissRequest = { showSwitcher = false },
+                                title = { Text("切换终端模式") },
+                                text = {
+                                        Column {
+                                                Text(
+                                                        "当前：" + TerminalModeManager.displayName(mode),
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Spacer(Modifier.height(12.dp))
+                                                ModeRow(
+                                                        title = "原生 Ubuntu 终端",
+                                                        desc = "proot 容器，rootfs 已内置",
+                                                        active = mode == TerminalModeManager.MODE_NATIVE
+                                                ) {
+                                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_NATIVE)
+                                                        mode = TerminalModeManager.MODE_NATIVE
+                                                        showSwitcher = false
                                                 }
-                                        },
-                                        confirmButton = {
-                                                TextButton(onClick = { showSwitcher = false }) { Text("关闭") }
+                                                Spacer(Modifier.height(8.dp))
+                                                ModeRow(
+                                                        title = "Termux 终端",
+                                                        desc = "真正的 pkg/apt 手机本地环境",
+                                                        active = mode == TerminalModeManager.MODE_TERMUX
+                                                ) {
+                                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_TERMUX)
+                                                        mode = TerminalModeManager.MODE_TERMUX
+                                                        showSwitcher = false
+                                                }
                                         }
-                                )
-                        }
+                                },
+                                confirmButton = {
+                                        TextButton(onClick = { showSwitcher = false }) { Text("关闭") }
+                                }
+                        )
                 }
         }
 }
 
 @Composable
-private fun ModeRow(
-        title: String,
-        desc: String,
-        active: Boolean,
-        onClick: () -> Unit
-) {
+private fun ModeTab(text: String, active: Boolean, onClick: () -> Unit) {
+        Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (active) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                onClick = onClick
+        ) {
+                Text(
+                        text,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = if (active) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+        }
+}
+
+@Composable
+private fun ModeRow(title: String, desc: String, active: Boolean, onClick: () -> Unit) {
         Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
