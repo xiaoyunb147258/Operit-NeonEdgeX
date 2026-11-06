@@ -455,7 +455,7 @@ private fun MessageBubble(msg: TeamMessage, members: List<TeamMember>) {
             }
             Spacer(Modifier.width(8.dp))
         }
-        Column(horizontalAlignment = if (msg.isUser) Arrangement.End else Alignment.Start) {
+        Column(horizontalAlignment = if (msg.isUser) Alignment.End else Alignment.Start) {
             Text(msg.memberName, fontSize = 10.sp, color = color, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
             Box(
