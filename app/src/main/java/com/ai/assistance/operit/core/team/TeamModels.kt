@@ -7,6 +7,7 @@ data class TeamMember(
     val emoji: String = "🤖",
     val systemPrompt: String = "",
     val modelId: String? = null,
+    val modelName: String? = null,
     val isFacilitator: Boolean = false
 )
 

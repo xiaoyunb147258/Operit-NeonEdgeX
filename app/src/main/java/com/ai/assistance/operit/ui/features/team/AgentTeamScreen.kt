@@ -53,7 +53,7 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
     var statusText by remember { mutableStateOf("") }
 
     var models by remember { mutableStateOf<List<TeamAiService.ModelOption>>(emptyList()) }
-    var selectedDesignerModel by remember { mutableStateOf<String?>(null) }
+    var selectedDesignerModel by remember { mutableStateOf<TeamAiService.ModelOption?>(null) }
 
     var showAddMember by remember { mutableStateOf(false) }
     var newMemberName by remember { mutableStateOf("") }
@@ -227,7 +227,7 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
     }
 
     if (showAddMember) {
-        var pickedModel by remember { mutableStateOf<String?>(null) }
+        var pickedModel by remember { mutableStateOf<TeamAiService.ModelOption?>(null) }
         AlertDialog(
                 onDismissRequest = { showAddMember = false },
                 title = { Text("添加成员") },
@@ -262,7 +262,8 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
                                     name = newMemberName.trim(),
                                     emoji = "🤖",
                                     systemPrompt = newMemberPrompt.trim(),
-                                    modelId = pickedModel,
+                                    modelId = pickedModel?.id,
+                                    modelName = pickedModel?.modelName,
                                     isFacilitator = members.isEmpty()
                             )
                             newMemberName = ""
@@ -277,7 +278,17 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
 
     val editTarget = editingMember
     if (editTarget != null) {
-        var picked by remember(editTarget.id) { mutableStateOf(editTarget.modelId) }
+        var picked by remember(editTarget.id) {
+            mutableStateOf(
+                    if (editTarget.modelId != null) {
+                        TeamAiService.ModelOption(
+                                id = editTarget.modelId,
+                                label = editTarget.modelName ?: editTarget.modelId,
+                                modelName = editTarget.modelName ?: ""
+                        )
+                    } else null
+            )
+        }
         AlertDialog(
                 onDismissRequest = { editingMember = null },
                 title = { Text("成员模型 · " + editTarget.name) },
@@ -291,7 +302,10 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        members = members.map { if (it.id == editTarget.id) it.copy(modelId = picked) else it }
+                        members = members.map {
+                            if (it.id == editTarget.id) it.copy(modelId = picked?.id, modelName = picked?.modelName)
+                            else it
+                        }
                         editingMember = null
                     }) { Text("保存") }
                 },
@@ -342,7 +356,8 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
                                     val designed = TeamAiService.autoDesignMembers(
                                             context = context,
                                             goal = goal,
-                                            modelId = selectedDesignerModel
+                                            modelId = selectedDesignerModel?.id,
+                                            modelName = selectedDesignerModel?.modelName
                                     )
                                     if (designed.isNotEmpty()) {
                                         members = designed
@@ -378,17 +393,17 @@ fun AgentTeamScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun ModelPicker(
         models: List<TeamAiService.ModelOption>,
-        selected: String?,
-        onSelect: (String) -> Unit
+        selected: TeamAiService.ModelOption?,
+        onSelect: (TeamAiService.ModelOption) -> Unit
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         models.forEach { m ->
-            val active = selected == m.id
+            val active = selected?.id == m.id && selected?.label == m.label
             Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = if (active) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    onClick = { onSelect(m.id) }
+                    onClick = { onSelect(m) }
             ) {
                 Text(
                         m.label,

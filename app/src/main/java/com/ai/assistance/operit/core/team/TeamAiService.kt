@@ -35,17 +35,37 @@ object TeamAiService {
             [{"name":"名称","emoji":"🤖","systemPrompt":"角色设定","isFacilitator":true}]
             """.trimIndent()
 
-    /** 可选模型列表 */
-    data class ModelOption(val id: String, val label: String)
+    /** 可选模型：configId + 模型名 + 显示标签 */
+    data class ModelOption(val id: String, val label: String, val modelName: String = "")
 
-    /** 列出可用的模型配置 */
+    /**
+     * 列出所有可用模型。
+     * 每条配置里可能有多个模型（modelName 逗号分隔），这里全部展开，
+     * 这样用户能看到「配置名 · 模型名」，而不是只有一条「默认配置」。
+     */
     suspend fun listModels(context: Context): List<ModelOption> =
             withContext(Dispatchers.IO) {
                 runCatching {
                     val manager = ModelConfigManager(context)
-                    manager.getAllConfigSummaries().map { s ->
-                        ModelOption(id = s.id, label = s.name.ifBlank { s.modelName.ifBlank { s.id } })
+                    val out = mutableListOf<ModelOption>()
+                    manager.getAllConfigSummaries().forEach { s ->
+                        val names = s.modelName.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        if (names.isEmpty()) {
+                            out.add(ModelOption(id = s.id, label = s.name.ifBlank { s.id }, modelName = ""))
+                        } else {
+                            names.forEach { mn ->
+                                val cfgLabel = s.name.ifBlank { s.id }
+                                out.add(
+                                        ModelOption(
+                                                id = s.id,
+                                                label = cfgLabel + " · " + mn,
+                                                modelName = mn
+                                        )
+                                )
+                            }
+                        }
                     }
+                    out
                 }.getOrElse { emptyList() }
             }
 
@@ -53,7 +73,8 @@ object TeamAiService {
     suspend fun autoDesignMembers(
             context: Context,
             goal: String,
-            modelId: String? = null
+            modelId: String? = null,
+            modelName: String? = null
     ): List<TeamMember> =
             withContext(Dispatchers.IO) {
                 runCatching {
@@ -62,7 +83,8 @@ object TeamAiService {
                                     context = context,
                                     systemPrompt = DESIGNER_PROMPT,
                                     userMessage = "目标：" + goal,
-                                    modelId = modelId
+                                    modelId = modelId,
+                                    modelName = modelName
                             )
                     parseMembers(reply)
                 }.getOrElse { e ->
@@ -109,7 +131,7 @@ object TeamAiService {
                 append(userInput)
             }
 
-            callModel(context, system, userText, member.modelId)
+            callModel(context, system, userText, member.modelId, member.modelName)
         }.getOrElse { e ->
             AppLogger.e(TAG, "memberReply failed for " + member.name, e)
             "（" + member.name + " 暂时无法回复：" + (e.message ?: "未知错误") + "）"
@@ -121,7 +143,8 @@ object TeamAiService {
             context: Context,
             systemPrompt: String,
             userMessage: String,
-            modelId: String? = null
+            modelId: String? = null,
+            modelName: String? = null
     ): String {
         val manager = ModelConfigManager(context)
         val summaries = manager.getAllConfigSummaries()
@@ -149,7 +172,11 @@ object TeamAiService {
             )
         }
 
-        val service = AIServiceFactory.createService(config, manager, context)
+        // 指定了具体模型名时，用该名称覆盖配置里的 modelName
+        val effectiveConfig =
+                if (!modelName.isNullOrBlank()) config.copy(modelName = modelName) else config
+
+        val service = AIServiceFactory.createService(effectiveConfig, manager, context)
 
         val history =
                 listOf(
