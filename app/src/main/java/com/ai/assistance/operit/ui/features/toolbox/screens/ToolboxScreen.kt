@@ -235,54 +235,71 @@ fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = f
                 } else null
 
         CustomScaffold() { paddingValues ->
-                Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                        // 顶部模式切换条（始终可见）
-                        Row(
-                                modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                                Text(
-                                        "终端类型",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                )
-                                ModeTab(
-                                        text = "原生 Ubuntu",
-                                        active = mode == TerminalModeManager.MODE_NATIVE
-                                ) {
-                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_NATIVE)
-                                        mode = TerminalModeManager.MODE_NATIVE
-                                }
-                                Spacer(Modifier.width(6.dp))
-                                ModeTab(
-                                        text = "Termux",
-                                        active = mode == TerminalModeManager.MODE_TERMUX
-                                ) {
-                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_TERMUX)
-                                        mode = TerminalModeManager.MODE_TERMUX
-                                }
-                                Spacer(Modifier.weight(1f))
-                                IconButton(onClick = { showSwitcher = true }, modifier = Modifier.size(30.dp)) {
-                                        Icon(
-                                                Icons.Default.Terminal,
-                                                contentDescription = "切换终端模式",
-                                                modifier = Modifier.size(18.dp)
-                                        )
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        // 终端内容（铺满整个区域）
+                        if (mode == TerminalModeManager.MODE_TERMUX) {
+                                TermuxTerminalScreen()
+                        } else {
+                                val env = nativeEnv
+                                if (env != null) {
+                                        TerminalViewScreen(env = env)
                                 }
                         }
 
-                        // 内容区
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                if (mode == TerminalModeManager.MODE_TERMUX) {
-                                        TermuxTerminalScreen()
-                                } else {
-                                        val env = nativeEnv
-                                        if (env != null) {
-                                                TerminalViewScreen(env = env)
+                        // 悬浮切换条（盖在终端之上，永远可见）
+                        Surface(
+                                modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                                shadowElevation = 6.dp
+                        ) {
+                                Row(
+                                        modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Text(
+                                                "终端",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(end = 6.dp)
+                                        )
+                                        ModeTab(
+                                                text = "Ubuntu",
+                                                active = mode == TerminalModeManager.MODE_NATIVE
+                                        ) {
+                                                TerminalModeManager.setMode(
+                                                        context,
+                                                        TerminalModeManager.MODE_NATIVE
+                                                )
+                                                mode = TerminalModeManager.MODE_NATIVE
+                                        }
+                                        Spacer(Modifier.width(5.dp))
+                                        ModeTab(
+                                                text = "Termux",
+                                                active = mode == TerminalModeManager.MODE_TERMUX
+                                        ) {
+                                                TerminalModeManager.setMode(
+                                                        context,
+                                                        TerminalModeManager.MODE_TERMUX
+                                                )
+                                                mode = TerminalModeManager.MODE_TERMUX
+                                        }
+                                        Spacer(Modifier.weight(1f))
+                                        IconButton(
+                                                onClick = { showSwitcher = true },
+                                                modifier = Modifier.size(28.dp)
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.Terminal,
+                                                        contentDescription = "切换终端模式",
+                                                        modifier = Modifier.size(16.dp)
+                                                )
                                         }
                                 }
                         }
@@ -305,7 +322,10 @@ fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = f
                                                         desc = "proot 容器，rootfs 已内置",
                                                         active = mode == TerminalModeManager.MODE_NATIVE
                                                 ) {
-                                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_NATIVE)
+                                                        TerminalModeManager.setMode(
+                                                                context,
+                                                                TerminalModeManager.MODE_NATIVE
+                                                        )
                                                         mode = TerminalModeManager.MODE_NATIVE
                                                         showSwitcher = false
                                                 }
@@ -315,7 +335,10 @@ fun TerminalToolScreen(navController: NavController, forceShowSetup: Boolean = f
                                                         desc = "真正的 pkg/apt 手机本地环境",
                                                         active = mode == TerminalModeManager.MODE_TERMUX
                                                 ) {
-                                                        TerminalModeManager.setMode(context, TerminalModeManager.MODE_TERMUX)
+                                                        TerminalModeManager.setMode(
+                                                                context,
+                                                                TerminalModeManager.MODE_TERMUX
+                                                        )
                                                         mode = TerminalModeManager.MODE_TERMUX
                                                         showSwitcher = false
                                                 }
